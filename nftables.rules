@@ -1,0 +1,35 @@
+# nftables Firewall Ruleset for BikerOS
+
+# Flush existing rules
+table inet filter {
+    # Define a default deny policy
+    chain input {
+        type filter hook input priority 0; policy deny;
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy deny;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy deny;
+    }
+}
+
+# Allow WireGuard VPN
+# Replace <WG_PORT> with your WireGuard port, typically 51820
+
+nft add rule inet filter input udp dport <WG_PORT> accept
+nft add rule inet filter input ip saddr <YOUR_WG_CLIENT_IP> accept
+nft add rule inet filter input ip protocol icmp accept
+
+# Allow necessary outgoing connections
+table inet filter {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        # Allow outgoing DNS
+        udp dport 53 accept;
+        # Allow outgoing HTTP/HTTPS
+        tcp dport {80, 443} accept;
+    }
+}
