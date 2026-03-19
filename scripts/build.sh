@@ -1,24 +1,16 @@
 #!/usr/bin/env bash
 
-# BikerOS Final Builder Script - RiderCore v1.0 MVP (2026)
-# Combines previous codes + realistic features from blueprint
-# Features in ISO:
-#   - Arch + KDE Plasma
-#   - Dark theme + #FF5500 accent + Rajdhani / JetBrains Mono fonts
-#   - Packages: WireGuard, Firejail, AppArmor, Ollama, Waydroid, Wine/Proton, Steam etc.
-#   - Plymouth splash (spinner - custom visor later)
-#   - Services enabled
-#   - skel configs for new users
-# Limitations noted in comments
+# BikerOS Unified Builder Script
+# This script consolidates the build logic for BikerOS, ensuring a consistent and robust ISO creation process.
 
 set -e
 
-WORK_DIR="${HOME}/bikeros-final"
-PROFILE_DIR="${WORK_DIR}/rider-profile"
+WORK_DIR="${HOME}/bikeros-build"
+PROFILE_DIR="${WORK_DIR}/iso-profile"
 OUT_DIR="${WORK_DIR}/out"
-ISO_NAME="BikerOS-RiderCore-v1.0-$(date +%Y%m%d).iso"
+ISO_NAME="BikerOS-Unified-$(date +%Y%m%d).iso"
 
-echo "מתקין archiso + deps..."
+echo "Installing archiso + deps..."
 sudo pacman -Syu --noconfirm --needed archiso git base-devel cmake qt5-base
 
 mkdir -p "${PROFILE_DIR}"
@@ -38,14 +30,14 @@ EOF
 # profiledef.sh
 cat << EOF > "${PROFILE_DIR}/profiledef.sh"
 #!/usr/bin/env bash
-iso_name="bikeros-ridercore"
-iso_label="BikerOS_RiderCore_v1"
+iso_name="bikeros-unified"
+iso_label="BikerOS_Unified_v1"
 iso_publisher="Itay Shmolovitz <@YSmwlbyz89021>"
 iso_application="BikerOS - Cockpit for Riders"
 iso_version="1.0"
 install_dir="arch"
-buildmodes=('iso')
-bootmodes=('uefi-x64.grub.eltorito')
+buildmodes=(\'iso\')
+bootmodes=(\'uefi-x64.grub.eltorito\')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
@@ -69,19 +61,19 @@ Include = /etc/pacman.d/mirrorlist
 EOF
 
 # customize_airootfs.sh - main magic
-cat << 'EOF' > "${PROFILE_DIR}/airootfs/root/customize_airootfs.sh"
+cat << \'EOF\' > "${PROFILE_DIR}/airootfs/root/customize_airootfs.sh"
 #!/usr/bin/env bash
 set -e -u -x
 
 pacman -Syu --noconfirm
 
 # Enable multilib
-sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
+sed -i "/\\[multilib\\]/,/Include/"\'s/^#//\' /etc/pacman.conf
 pacman -Syu --noconfirm
 
 # Install yay for AUR
 pacman -S --noconfirm --needed base-devel git
-su -c 'git clone https://aur.archlinux.org/yay.git /tmp/yay && cd /tmp/yay && makepkg -si --noconfirm' -s /bin/sh nobody
+su -c \'git clone https://aur.archlinux.org/yay.git /tmp/yay && cd /tmp/yay && makepkg -si --noconfirm\' -s /bin/sh nobody
 rm -rf /tmp/yay
 
 # AUR extras
@@ -92,7 +84,7 @@ systemctl enable sddm NetworkManager apparmor ufw
 
 # Plymouth basic (visor animation needs custom theme dev later)
 plymouth-set-default-theme -R spinner
-sed -i 's/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont plymouth block filesystems fsck)/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont plymouth encrypt block filesystems fsck)/' /etc/mkinitcpio.conf
+sed -i \'s/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont plymouth block filesystems fsck)/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont plymouth encrypt block filesystems fsck)/\' /etc/mkinitcpio.conf
 mkinitcpio -P
 
 # Firewall default closed
@@ -145,12 +137,20 @@ EOF
 
 chmod +x "${PROFILE_DIR}/airootfs/root/customize_airootfs.sh"
 
+# Copy grub.cfg and custom .bashrc to the correct location within the ISO profile
+mkdir -p "${PROFILE_DIR}/airootfs/boot/grub"
+cp /home/builder/Biker-OS/iso-profile/grub.cfg "${PROFILE_DIR}/airootfs/boot/grub/grub.cfg"
+
+mkdir -p "${PROFILE_DIR}/airootfs/etc/skel"
+cp /home/builder/Biker-OS/iso-profile/bashrc "${PROFILE_DIR}/airootfs/etc/skel/.bashrc"
+cp /home/builder/Biker-OS/iso-profile/bashrc "${PROFILE_DIR}/airootfs/root/.bashrc"
+
 # Build the ISO
 cd "${PROFILE_DIR}"
 sudo mkarchiso -v -w /tmp/archiso-tmp -o "${OUT_DIR}" .
 
 echo "======================================"
-echo "BikerOS ISO מוכן כאן: ${OUT_DIR}/${ISO_NAME}"
-echo "הרץ ב-VirtualBox / qemu-system-x86_64 -cdrom ..."
-echo "זה MVP – להתקנה מלאה (atomic / visor / VISO AI) תמשיך לפתח אחרי ההתקנה."
-echo "🏍️ It's alive! Now ride safe. 💨"
+echo "BikerOS ISO ready here: ${OUT_DIR}/${ISO_NAME}"
+echo "Test in VirtualBox / qemu-system-x86_64 -cdrom ..."
+echo "This is an MVP – for full installation (atomic / visor / VISO AI) continue development after installation."
+echo "🏍️ It\'s alive! Now ride safe. 💨"
