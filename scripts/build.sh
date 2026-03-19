@@ -36,8 +36,8 @@ iso_publisher="Itay Shmolovitz <@YSmwlbyz89021>"
 iso_application="BikerOS - Cockpit for Riders"
 iso_version="1.0"
 install_dir="arch"
-buildmodes=(\'iso\')
-bootmodes=(\'uefi-x64.grub.eltorito\')
+buildmodes=('iso')
+bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-x64.grub.esp' 'uefi-x64.grub.eltorito')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
@@ -138,6 +138,11 @@ EOF
 chmod +x "${PROFILE_DIR}/airootfs/root/customize_airootfs.sh"
 
 # Copy grub.cfg and custom .bashrc to the correct location within the ISO profile
+# For archiso, GRUB configs for the live environment are usually in grub/
+mkdir -p "${PROFILE_DIR}/grub"
+cp /home/builder/Biker-OS/iso-profile/grub.cfg "${PROFILE_DIR}/grub/grub.cfg"
+
+# Also place it in airootfs for the installed system
 mkdir -p "${PROFILE_DIR}/airootfs/boot/grub"
 cp /home/builder/Biker-OS/iso-profile/grub.cfg "${PROFILE_DIR}/airootfs/boot/grub/grub.cfg"
 
